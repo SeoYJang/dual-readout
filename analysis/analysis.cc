@@ -1,5 +1,5 @@
 #include "RootInterface.h"
-#include "RecoInterface.h"
+//#include "RecoInterface.h"
 #include "DRsimInterface.h"
 #include "functions.h"
 
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
   while (drInterface->numEvt() < entries) {
     if (drInterface->numEvt() % 100 == 0) printf("Analyzing %dth event ...\n", drInterface->numEvt());
 
-    RecoInterface::RecoEventData evt;
+    //RecoInterface::RecoEventData evt;
     //recoInterface->read(evt);
 
     DRsimInterface::DRsimEventData drEvt;
@@ -123,6 +123,10 @@ int main(int argc, char* argv[]) {
 
   //
     float rE_C, rE_S;
+    float sE_C, sE_S;
+    sE_C = 0.;
+    sE_S = 0.;
+
     int sum, ttheta;
   //
 
@@ -140,7 +144,12 @@ int main(int argc, char* argv[]) {
       //
 
       for (auto sipm = tower->SiPMs.begin(); sipm != tower->SiPMs.end(); ++sipm) {
-        if ( RecoInterface::IsCerenkov(sipm->x,sipm->y) ) {
+
+        bool isCeren = false;
+        if ( sipm->x%2 == 1 ) { isCeren = !isCeren; }
+        if ( sipm->y%2 == 1 ) { isCeren = !isCeren; }
+          
+        if (isCeren) {
           tNhit_C->Fill(sipm->count);
 
           //
@@ -178,8 +187,8 @@ int main(int argc, char* argv[]) {
       }
 
       //
-      evt.E_C += rE_C;
-      evt.E_S += rE_S;
+      sE_C += rE_C;
+      sE_S += rE_S;
 
       /*
       Calibration 진행해서 tower에 대한 에너지 더함. Reco 쓰지 말것 -> only for jet construction and different structure.
@@ -197,11 +206,13 @@ int main(int argc, char* argv[]) {
     float depth = ( T_max - 1.8/0.3 - 2.0/0.1895 ) / ( 1./0.3 - 1./0.1895 ); // 1895
 
     delete tT_max;
+//
 
-    float E_Scorr = evt.E_S*std::exp( -(depth-0.1368)/12.78 );
+    float E_Scorr = sE_S*std::exp( -(depth-0.1368)/12.78 );
 
+//
     E_Ss.push_back(E_Scorr);
-    E_Cs.push_back(evt.E_C);
+    E_Cs.push_back(sE_C);
 
     if (Pleak > 3000.) {
       nLeak++;
@@ -211,14 +222,14 @@ int main(int argc, char* argv[]) {
     tEdep_noLeak->Fill(Edep);
 
     E_Ss_noLeak.push_back(E_Scorr);
-    E_Cs_noLeak.push_back(evt.E_C);
+    E_Cs_noLeak.push_back(sE_C);
 
-    tE_C->Fill(evt.E_C);
-    tE_S->Fill(evt.E_S);
-    tE_SC->Fill(evt.E_C+E_Scorr);
+    tE_C->Fill(sE_C);
+    tE_S->Fill(sE_S);
+    tE_SC->Fill(sE_C+E_Scorr);
     // tE_SC->Fill(evt.E_C+evt.E_S);
     // tE_DR->Fill(evt.E_DR);
-    tE_DR->Fill(functions::E_DR291(evt.E_C,E_Scorr));
+    tE_DR->Fill(functions::E_DR291(sE_C,E_Scorr));
     tDepth->Fill(depth);
   } // event loop
 
